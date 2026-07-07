@@ -450,30 +450,8 @@ task.spawn(function()
     end
 end)
 
-task.spawn(function()
-    while task.wait(0.5) do
-        pcall(function()
-            local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
-            local remote = rEvents and rEvents:FindFirstChild("changeSpeedSizeRemote")
-            if remote then
-                remote:InvokeServer("changeSize", 0/0)
-            end
-        end)
-    end
-end)
-
-if typeof(Killer) ~= "nil" and Killer.AddButton then
-    Killer:AddButton("Size NaN", function()
-        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
-        if rEvents and rEvents:FindFirstChild("changeSpeedSizeRemote") then
-            rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", 0/0)
-        end
-    end)
-end
-
 --Anti Atasco (Hop en 150 Segundos)
 task.spawn(function()
     task.wait(150)
     ExecuteRealServerHop()
 end)
-
