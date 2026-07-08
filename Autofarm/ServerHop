@@ -204,7 +204,7 @@ task.spawn(function()
             updateBrawls()
             if newVal > currentBrawls then
                 currentBrawls = newVal
-                task.wait(1)
+                task.wait(2)
                 HopBugeado()
             end
         end)
@@ -295,7 +295,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
                     if target ~= LocalPlayer and target.Character then
                         local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
                         if targetRoot then
-                            --Si un enemigo esta a menos de 500 studs del centro de la arena
+                            -- Si un enemigo esta a menos de 500 studs del centro de la arena
                             if (targetRoot.Position - secretPosition.Position).Magnitude < 500 then
                                 hadEnemies = true
                             end
@@ -369,4 +369,17 @@ LocalPlayer.CharacterAdded:Connect(function()
     initialPosition = nil
     arenaTime = 0
     hadEnemies = false
+end)
+
+--Auto Spin Wheel
+_G.AutoSpinWheel = true
+task.spawn(function()
+    while _G.AutoSpinWheel do
+        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+        local remote = rEvents and rEvents:FindFirstChild("openFortuneWheelRemote")
+        if remote and ReplicatedStorage:FindFirstChild("fortuneWheelChances") then
+            remote:InvokeServer("openFortuneWheel", ReplicatedStorage.fortuneWheelChances["Fortune Wheel"])
+        end
+        task.wait(1) 
+    end
 end)
