@@ -1,4 +1,4 @@
---Variables Principales
+-- Variables Principales
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TS = game:GetService("TeleportService")
@@ -11,18 +11,24 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local Settings = settings()
 
---Estado Global del Brawl y Posicion
+-- Estado Global del Brawl y Mapas
+local joinedBrawl = false
 local isInBrawlArena = false
-local initialPosition = nil
-local secretPosition = CFrame.new(1950, 2, 6190)
+local activeBrawlMap = nil
 
---Anti AFK
+local brawlMaps = {
+    Lava = Vector3.new(4334, 34, -9820),
+    Desert = Vector3.new(827, 34, -8361),
+    Regular = Vector3.new(-1994, 34, -7168)
+}
+
+-- Anti AFK
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
---Optimizacion de Rendimiento
+-- Optimizacion de Rendimiento Extrema
 local function cleanPart(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("UnionOperation") then
         v.Material = Enum.Material.Plastic
@@ -48,7 +54,7 @@ end
 optimizePerformance()
 Workspace.DescendantAdded:Connect(cleanPart)
 
---Ocultar UI Innecesaria
+-- Ocultar UI Innecesaria
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
 local function checkAndHideGui(gui)
     if gui:IsA("TextLabel") or gui:IsA("ImageLabel") or gui:IsA("Frame") then
@@ -70,7 +76,7 @@ end
 for _, g in pairs(playerGui:GetDescendants()) do checkAndHideGui(g) end
 playerGui.DescendantAdded:Connect(checkAndHideGui)
 
---Interfaz de Usuario
+-- Interfaz de Usuario
 if playerGui:FindFirstChild("ApexBrawlGUI") then playerGui["ApexBrawlGUI"]:Destroy() end
 if playerGui:FindFirstChild("ApexKillGUI") then playerGui["ApexKillGUI"]:Destroy() end
 
@@ -146,7 +152,7 @@ brawlsLabel.TextXAlignment = Enum.TextXAlignment.Left
 brawlsLabel.Text = "0 (0K)"
 brawlsLabel.Parent = frame
 
---Sistema de Server Hop
+-- Sistema de Server Hop
 local function ExecuteRealServerHop()
     local nextCursor = ""
     local serverFound = false
@@ -180,7 +186,7 @@ local function ExecuteRealServerHop()
     if not serverFound then pcall(function() TS:Teleport(game.PlaceId, LocalPlayer) end) end
 end
 
---Estadisticas y Cronometro
+-- Estadisticas y Salida Exacta de 1 Segundo
 local function formatNumber(v)
     return tostring(v):reverse():gsub("%d%d%d", "%1,"):reverse():gsub("^,", "")
 end
@@ -213,7 +219,8 @@ task.spawn(function()
             updateBrawls()
             if newVal > currentBrawls then
                 currentBrawls = newVal
-                task.wait(5)
+                -- Teletransporta a otro servidor EXACTAMENTE 1 segundo despues de ganar
+                task.wait(1)
                 ExecuteRealServerHop()
             end
         end)
@@ -238,7 +245,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
---Funciones del Personaje
+-- Funciones del Personaje
 local function applySize2()
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -251,7 +258,6 @@ local function applySize2()
     end
 end
 
---Bloqueo de Animaciones
 local blockedAnimations = {
     ["rbxassetid://3638729053"] = true,
     ["rbxassetid://3638767427"] = true,
@@ -325,33 +331,62 @@ end
 task.spawn(initCharacter)
 LocalPlayer.CharacterAdded:Connect(function() initCharacter() end)
 
---Congelamiento en Area Secreta del Brawl
-RunService.Heartbeat:Connect(function()
-    if isInBrawlArena then
-        local char = LocalPlayer.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        if root then
-            root.Anchored = true
-            root.CFrame = secretPosition
-            root.Velocity = Vector3.zero
-            root.AssemblyLinearVelocity = Vector3.zero
+-- Sistema de Entrada Segura a Brawl Solo 1 Vez y Tras 1 Segundo
+task.spawn(function()
+    while task.wait(0.5) do
+        if not joinedBrawl then
+            local ui = playerGui:FindFirstChild("gameGui")
+            if ui then
+                local popup = ui:FindFirstChild("brawlPopup")
+                -- Detecta que la interfaz aparecio
+                if popup and popup.Visible then
+                    joinedBrawl = true 
+                    task.wait(1) -- Espera exactamente 1 segundo para entrar
+                    pcall(function()
+                        local r = ReplicatedStorage:FindFirstChild("rEvents")
+                        if r and r:FindFirstChild("brawlEvent") then
+                            r.brawlEvent:FireServer("joinBrawl")
+                        end
+                    end)
+                end
+            end
         end
     end
 end)
 
---Sistema Auto Kill Exclusivo para Brawl
+-- Sistema Central: Teletransporte por Mapa, Auto Punch y Auto Kill
 local tickCounter = 0
 RunService.Heartbeat:Connect(function()
     tickCounter = tickCounter + 1
     if tickCounter % 2 ~= 0 then return end 
     applySize2()
     
-    if not isInBrawlArena then return end
-
     local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    -- Verifica en cual mapa caimos analizando nuestra posicion actual
+    if joinedBrawl and not activeBrawlMap then
+        for _, coord in pairs(brawlMaps) do
+            local dist = (root.Position - coord).Magnitude
+            if dist < 1500 then -- Si estamos a menos de 1500 studs de la arena
+                activeBrawlMap = coord
+                isInBrawlArena = true
+                break
+            end
+        end
+    end
+
+    if not isInBrawlArena or not activeBrawlMap then return end
+
+    -- Ancla y bloquea el personaje en la coordenada exacta del mapa actual
+    root.CFrame = CFrame.new(activeBrawlMap)
+    root.Velocity = Vector3.zero
+
+    if char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
         stopAnimations(char.Humanoid)
         
+        -- Da puñetazos automaticamente (simula el click izquierdo)
         local tool = LocalPlayer.Backpack:FindFirstChild("Punch") or char:FindFirstChild("Punch")
         if tool then
             char.Humanoid:EquipTool(tool)
@@ -359,23 +394,27 @@ RunService.Heartbeat:Connect(function()
             pcall(function() tool:Activate() end)
         end
         
+        -- Auto Kill (Golpea a todos en el ring sin moverte de la coordenada)
         local rightHand = char:FindFirstChild("RightHand")
-        if rightHand and initialPosition then
+        if rightHand then
             for _, target in ipairs(Players:GetPlayers()) do
                 if target ~= LocalPlayer and target.Character then
                     local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
                     local targetHead = target.Character:FindFirstChild("Head")
                     local targetHumanoid = target.Character:FindFirstChild("Humanoid")
                     
-                    if targetRoot and targetHead and targetHumanoid and targetHumanoid.Health > 0 then
-                        --Verifica si el enemigo esta en la arena del Brawl
-                        local targetDist = (targetRoot.Position - initialPosition).Magnitude
-                        if targetDist > 800 then
+                    if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+                        -- Verifica si el enemigo esta dentro de la misma arena
+                        local targetDist = (targetRoot.Position - activeBrawlMap).Magnitude
+                        if targetDist < 1500 then
                             pcall(function()
+                                -- Ataca la cabeza y el pecho simultaneamente para matar al instante
                                 firetouchinterest(rightHand, targetRoot, 1)
                                 firetouchinterest(rightHand, targetRoot, 0)
-                                firetouchinterest(rightHand, targetHead, 1)
-                                firetouchinterest(rightHand, targetHead, 0)
+                                if targetHead then
+                                    firetouchinterest(rightHand, targetHead, 1)
+                                    firetouchinterest(rightHand, targetHead, 0)
+                                end
                             end)
                         end
                     end
@@ -385,44 +424,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
---Detector de Brawl y Entrada Segura (1 Segundo Despues)
-local joinedBrawl = false
-task.spawn(function()
-    while task.wait(0.5) do
-        local char = LocalPlayer.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        
-        if root then
-            if not initialPosition and root.Position.Magnitude < 1000 then
-                initialPosition = root.Position
-            end
-
-            if initialPosition then
-                local dist = (root.Position - initialPosition).Magnitude
-                if dist > 800 then
-                    isInBrawlArena = true
-                end
-            end
-        end
-
-        --Detecta la interfaz del juego para confirmar inicio de Brawl
-        if not joinedBrawl and not isInBrawlArena then
-            local ui = playerGui:FindFirstChild("gameGui")
-            if ui and ui:FindFirstChild("brawlFrame") and ui.brawlFrame.Visible then
-                joinedBrawl = true -- Bloquea para entrar solo 1 vez
-                task.wait(1) -- Espera exactamente 1 segundo despues de iniciado
-                pcall(function()
-                    local r = ReplicatedStorage:FindFirstChild("rEvents")
-                    if r and r:FindFirstChild("brawlEvent") then
-                        r.brawlEvent:FireServer("joinBrawl")
-                    end
-                end)
-            end
-        end
-    end
-end)
-
---Eventos Miscelaneos
+-- Eventos Miscelaneos
 local toggled = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -450,7 +452,7 @@ task.spawn(function()
     end
 end)
 
---Anti Atasco (Hop en 150 Segundos)
+-- Anti Atasco (Hop en 150 Segundos de seguridad)
 task.spawn(function()
     task.wait(150)
     ExecuteRealServerHop()
