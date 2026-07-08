@@ -279,8 +279,8 @@ RunService.Heartbeat:Connect(function(deltaTime)
     if initialPosition then
         local dist = (root.Position - initialPosition).Magnitude
         
-        --Si la distancia es mayor a 800, el servidor nos metio a la arena
-        if dist > 800 or isInBrawlArena then
+        --Solución: ¡Con solo establecer "dist > 800", el juego te devuelve al lobby sin que el script falle! 
+        if dist > 800 then
             if not isInBrawlArena then
                 isInBrawlArena = true
                 arenaTime = 0
@@ -295,8 +295,8 @@ RunService.Heartbeat:Connect(function(deltaTime)
                     if target ~= LocalPlayer and target.Character then
                         local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
                         if targetRoot then
-                            -- Si un enemigo esta a menos de 500 studs del centro de la arena
-                            if (targetRoot.Position - secretPosition.Position).Magnitude < 500 then
+                            -- Aumentado para 1500: Pega o inimigo em qualquer canto da arena!
+                            if (targetRoot.Position - secretPosition.Position).Magnitude < 1500 then
                                 hadEnemies = true
                             end
                         end
