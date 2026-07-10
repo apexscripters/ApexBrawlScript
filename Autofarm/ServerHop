@@ -1,4 +1,4 @@
---Variables Principales
+--Variables principales y servicios del juego
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TS = game:GetService("TeleportService")
@@ -10,13 +10,13 @@ local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 local Settings = settings()
 
---Anti AFK
+--Evitar desconexion por inactividad
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
---Anti Lag Fuerte (Noche y Rendimiento Maximo)
+--Limpiar texturas y materiales para reducir lag
 local function cleanPart(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("UnionOperation") then
         v.Material = Enum.Material.Plastic
@@ -29,21 +29,28 @@ local function cleanPart(v)
     end
 end
 
+--Aplicar configuraciones graficas minimas
 local function optimizePerformance()
     Settings.Rendering.QualityLevel = Enum.QualityLevel.Level01
     Lighting.GlobalShadows = false
     Lighting.Brightness = 0.5
-    Lighting.ClockTime = 5.5 -- Deja el mapa de noche
+    Lighting.ClockTime = 5.5
     Lighting.EnvironmentDiffuseScale = 0
     Lighting.EnvironmentSpecularScale = 0
     if Lighting:FindFirstChild("Sky") then Lighting.Sky:Destroy() end
     for _, v in pairs(Workspace:GetDescendants()) do cleanPart(v) end
 end
+
+--Ejecutar optimizacion de rendimiento
 optimizePerformance()
+
+--Conectar funcion de limpieza a nuevas partes generadas
 Workspace.DescendantAdded:Connect(cleanPart)
 
---Interfaz de Usuario
+--Definir ruta de la interfaz de usuario
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+--Comprobar y ocultar interfaces molestas del juego
 local function checkAndHideGui(gui)
     if gui:IsA("TextLabel") or gui:IsA("ImageLabel") or gui:IsA("Frame") then
         if gui.Name == "ApexBrawlGUI" or gui:IsDescendantOf(playerGui:FindFirstChild("ApexBrawlGUI")) then return end
@@ -60,26 +67,44 @@ local function checkAndHideGui(gui)
         end
     end
 end
+
+--Aplicar bloqueo de interfaces iniciales
 for _, g in pairs(playerGui:GetDescendants()) do checkAndHideGui(g) end
+
+--Aplicar bloqueo de interfaces a futuros elementos
 playerGui.DescendantAdded:Connect(checkAndHideGui)
 
+--Eliminar interfaces previas si existen
 if playerGui:FindFirstChild("ApexBrawlGUI") then playerGui["ApexBrawlGUI"]:Destroy() end
 if playerGui:FindFirstChild("ApexKillGUI") then playerGui["ApexKillGUI"]:Destroy() end
 
+--Crear base principal de la interfaz
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ApexBrawlGUI"
 screenGui.ResetOnSpawn = false
 screenGui.AutoLocalize = false
 screenGui.Parent = playerGui
 
+--Crear marco oscuro de la interfaz
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 180, 0, 100)
 frame.Position = UDim2.new(0, 25, 0, 35)
-frame.BackgroundColor3 = Color3.fromRGB(45, 15, 85)
-frame.BorderSizePixel = 3
-frame.BorderColor3 = Color3.fromRGB(140, 60, 230)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
+--Aplicar aura arcoiris animada sin lag
+local rgbAura = Instance.new("UIStroke")
+rgbAura.Parent = frame
+rgbAura.Thickness = 4
+rgbAura.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+--Actualizar colores del aura arcoiris en tiempo real
+RunService.RenderStepped:Connect(function()
+    rgbAura.Color = Color3.fromHSV(tick() % 4 / 4, 1, 1)
+end)
+
+--Texto del titulo de la interfaz
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0, 110, 0, 25)
 title.Position = UDim2.new(0, 10, 0, 8)
@@ -91,6 +116,7 @@ title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = frame
 
+--Texto indicador de latencia y cuadros por segundo
 local statsLabel = Instance.new("TextLabel")
 statsLabel.Size = UDim2.new(0, 60, 0, 25)
 statsLabel.Position = UDim2.new(1, -65, 0, 8)
@@ -102,17 +128,19 @@ statsLabel.Font = Enum.Font.SourceSansBold
 statsLabel.TextXAlignment = Enum.TextXAlignment.Right
 statsLabel.Parent = frame
 
+--Subtitulo descriptivo para los brawls
 local subtitle = Instance.new("TextLabel")
 subtitle.Size = UDim2.new(0, 100, 0, 15)
 subtitle.Position = UDim2.new(0, 10, 0, 38)
 subtitle.BackgroundTransparency = 1
 subtitle.Text = "Brawls:"
-subtitle.TextColor3 = Color3.fromRGB(155, 125, 185)
+subtitle.TextColor3 = Color3.fromRGB(180, 180, 180)
 subtitle.TextSize = 13
 subtitle.Font = Enum.Font.Gotham
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
 subtitle.Parent = frame
 
+--Texto del cronometro de tiempo en el servidor
 local ChronoLabel = Instance.new("TextLabel")
 ChronoLabel.Size = UDim2.new(0, 70, 0, 15)
 ChronoLabel.Position = UDim2.new(1, -75, 0, 38)
@@ -120,10 +148,11 @@ ChronoLabel.BackgroundTransparency = 1
 ChronoLabel.Text = "00:00.00"
 ChronoLabel.Font = Enum.Font.SourceSans
 ChronoLabel.TextSize = 12
-ChronoLabel.TextColor3 = Color3.fromRGB(185, 185, 185)
+ChronoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 ChronoLabel.TextXAlignment = Enum.TextXAlignment.Right
 ChronoLabel.Parent = frame
 
+--Texto que muestra la cantidad de brawls ganados
 local brawlsLabel = Instance.new("TextLabel")
 brawlsLabel.Size = UDim2.new(1, -20, 0, 30)
 brawlsLabel.Position = UDim2.new(0, 10, 0, 58)
@@ -135,12 +164,15 @@ brawlsLabel.TextXAlignment = Enum.TextXAlignment.Left
 brawlsLabel.Text = "0 (0K)"
 brawlsLabel.Parent = frame
 
---Estadisticas y Gatillo de Victoria
+--Formatear numeros agregando comas divisorias
 local function formatNumber(v)
     return tostring(v):reverse():gsub("%d%d%d", "%1,"):reverse():gsub("^,", "")
 end
 
+--Variables de control para salto de servidor
 local isHopping = false
+
+--Buscar servidores con pocos jugadores y unirse automaticamente
 local function HopBugeado()
     if isHopping then return end
     isHopping = true
@@ -176,7 +208,10 @@ local function HopBugeado()
     if not serverFound then pcall(function() TS:Teleport(game.PlaceId, LocalPlayer) end) end
 end
 
+--Variable de cantidad de victorias actuales
 local currentBrawls = 0
+
+--Obtener brawls actuales y actualizar texto de la interfaz
 local function updateBrawls()
     local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
     if leaderstats and leaderstats:FindFirstChild("Brawls") then
@@ -193,13 +228,13 @@ local function updateBrawls()
     end
 end
 
+--Monitorear victorias para saltar de servidor
 task.spawn(function()
     local leaderstats = LocalPlayer:WaitForChild("leaderstats", 10)
     if leaderstats and leaderstats:FindFirstChild("Brawls") then
         currentBrawls = leaderstats.Brawls.Value
         updateBrawls()
         
-        --Si ganas un Brawl, salta de servidor enseguida
         leaderstats.Brawls.Changed:Connect(function(newVal)
             updateBrawls()
             if newVal > currentBrawls then
@@ -211,13 +246,15 @@ task.spawn(function()
     end
 end)
 
---Reloj y FPS
+--Variables para conteo de tiempo y rendimiento
 local cStart = os.clock()
 local lastUpdate = 0
 local frameCount = 0
 
+--Sumar fotogramas por cada ciclo de renderizado
 RunService.RenderStepped:Connect(function() frameCount = frameCount + 1 end)
 
+--Actualizar reloj y estadisticas de conexion periodicamente
 RunService.Heartbeat:Connect(function()
     local currentTime = os.clock()
     local cElapsed = currentTime - cStart
@@ -231,16 +268,16 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
---Entrada Automatica al Brawl
+--Variables de control para la arena de combate
 local initialPosition = nil
 local isInBrawlArena = false
 local arenaTime = 0
 local hadEnemies = false
 local secretPosition = CFrame.new(1949, 2, 6193)
 
+--Enviar peticion para unirse al brawl constantemente
 task.spawn(function()
     while task.wait(1) do
-        --Solo manda el evento si NO estamos dentro de la arena peleando
         if not isInBrawlArena then
             pcall(function()
                 local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
@@ -252,7 +289,7 @@ task.spawn(function()
     end
 end)
 
---Funciones del Personaje
+--Aumentar tamaño de ataque modificando escala del humanoide
 local function applySize2()
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -265,7 +302,7 @@ local function applySize2()
     end
 end
 
---Teleport Perfecto, Auto Kill y Detector de Enemigos en la Arena
+--Controlar posicion y activar auto kill en la arena
 RunService.Heartbeat:Connect(function(deltaTime)
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -279,7 +316,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
     if initialPosition then
         local dist = (root.Position - initialPosition).Magnitude
         
-        --Solución: ¡Con solo establecer "dist > 800", el juego te devuelve al lobby sin que el script falle! 
+        --Verificar distancia para confirmar entrada a la arena
         if dist > 800 then
             if not isInBrawlArena then
                 isInBrawlArena = true
@@ -289,13 +326,13 @@ RunService.Heartbeat:Connect(function(deltaTime)
             
             arenaTime = arenaTime + deltaTime
 
-            --Detector: Revisa si alguien mas entro a la arena contigo
+            --Detectar si hay enemigos presentes en la arena
             if not hadEnemies then
                 for _, target in ipairs(Players:GetPlayers()) do
                     if target ~= LocalPlayer and target.Character then
                         local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
                         if targetRoot then
-                            -- Aumentado para 1500: Pega o inimigo em qualquer canto da arena!
+                            -- Rango aumentado para detectar enemigos lejanos
                             if (targetRoot.Position - secretPosition.Position).Magnitude < 1500 then
                                 hadEnemies = true
                             end
@@ -304,17 +341,17 @@ RunService.Heartbeat:Connect(function(deltaTime)
                 end
             end
             
-            --Anti-Stuck de 90 segundos por si se bugea
+            --Prevenir encierro saltando de servidor tras noventa segundos
             if arenaTime > 90 then
                 HopBugeado()
             end
 
-            --Traba la posicion EXACTA que pediste y cancela el movimiento
+            --Inmovilizar personaje en la posicion secreta
             root.Velocity = Vector3.zero
             root.AssemblyLinearVelocity = Vector3.zero
             root.CFrame = secretPosition
 
-            --Activacion del Auto Kill
+            --Activar sistema de eliminacion automatica
             if char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
                 applySize2()
                 
@@ -347,12 +384,12 @@ RunService.Heartbeat:Connect(function(deltaTime)
                 end
             end
         else
-            --Regresaste al lobby
+            --Restablecer estado al regresar al lobby
             if isInBrawlArena then
                 isInBrawlArena = false
                 arenaTime = 0
                 
-                --Si estuviste en la arena sin nadie mas, salta de servidor inmediatamente
+                --Cambiar de servidor si la arena estaba vacia
                 if not hadEnemies then
                     HopBugeado()
                 end
@@ -363,7 +400,7 @@ RunService.Heartbeat:Connect(function(deltaTime)
     end
 end)
 
---Resetear variables si el personaje muere y reaparece
+--Restablecer variables al reaparecer el personaje
 LocalPlayer.CharacterAdded:Connect(function()
     isInBrawlArena = false
     initialPosition = nil
@@ -371,8 +408,10 @@ LocalPlayer.CharacterAdded:Connect(function()
     hadEnemies = false
 end)
 
---Auto Spin Wheel
+--Configurar auto giro de ruleta
 _G.AutoSpinWheel = true
+
+--Reclamar ruleta de la suerte automaticamente cada segundo
 task.spawn(function()
     while _G.AutoSpinWheel do
         local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
